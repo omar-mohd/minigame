@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Speed Test</title>
+    <!-- Load Tailwind CSS from CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Use Inter font -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        /* Custom styles for the text area */
+        #text-display .char {
+            display: inline-block;
+            transition: background-color 0.1s;
+            line-height: 1.6;
+        }
+        #text-display .current {
+            border-bottom: 2px solid #3b82f6; /* Blue cursor/highlight */
+            background-color: rgba(59, 130, 246, 0.1);
+            border-radius: 2px;
+        }
+        #text-display .correct {
+            color: #16a34a; /* Green */
+        }
+        #text-display .incorrect {
+            color: #ef4444; /* Red */
+            background-color: rgba(239, 68, 68, 0.2);
+            border-radius: 2px;
+        }
+        #text-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-4xl bg-white shadow-xl rounded-xl p-6 md:p-10">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Typing Speed & Accuracy Test</h1>
+
+        <!-- Stats Display -->
+        <div id="stats-container" class="grid grid-cols-3 gap-4 mb-8 text-center bg-gray-100 p-4 rounded-lg">
+            <div class="p-2">
+                <p class="text-xs uppercase font-medium text-gray-500">WPM</p>
+                <p id="wpm" class="text-3xl font-extrabold text-blue-600">0</p>
+            </div>
+            <div class="p-2">
+                <p class="text-xs uppercase font-medium text-gray-500">Accuracy</p>
+                <p id="accuracy" class="text-3xl font-extrabold text-green-600">100%</p>
+            </div>
+            <div class="p-2">
+                <p class="text-xs uppercase font-medium text-gray-500">Errors</p>
+                <p id="errors" class="text-3xl font-extrabold text-red-600">0</p>
+            </div>
+        </div>
+
+        <!-- Text Display Area -->
+        <div id="text-display" class="mb-6 p-6 border-2 border-gray-300 rounded-lg bg-gray-50 text-xl text-gray-700 leading-relaxed tracking-wider">
+            <!-- Text content will be inserted here by JavaScript -->
+        </div>
+
+        <!-- Input Field -->
+        <input type="text" id="text-input" placeholder="Start typing here..." autofocus
+               class="w-full p-4 text-xl border-2 border-blue-400 rounded-lg transition duration-200 focus:border-blue-600 focus:ring-4 focus:ring-blue-300">
+
+        <!-- Controls -->
+        <div class="mt-6 flex justify-center">
+            <button id="restart-button"
+                    class="px-6 py-3 bg-indigo-500 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-600 transition duration-150">
+                Restart Test
+            </button>
+        </div>
+
+        <!-- Game Over Modal (Hidden by default) -->
+        <div id="game-over-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50">
+            <div class="bg-white p-8 rounded-xl shadow-2xl text-center max-w-sm w-full">
+                <h2 class="text-3xl font-bold text-gray-800 mb-4">Test Complete!</h2>
+                <p class="text-lg text-gray-600 mb-6">Your results:</p>
+                <div class="space-y-3">
+                    <p class="text-2xl font-semibold"><span class="text-blue-600">WPM:</span> <span id="final-wpm">0</span></p>
+                    <p class="text-2xl font-semibold"><span class="text-green-600">Accuracy:</span> <span id="final-accuracy">100%</span></p>
+                    <p class="text-2xl font-semibold"><span class="text-red-600">Errors:</span> <span id="final-errors">0</span></p>
+                </div>
+                <button id="close-modal-button"
+                        class="mt-8 w-full px-4 py-3 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition duration-150">
+                    Close & Restart
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Global State & DOM References ---
+        const testTexts = [
+            "The quick brown fox jumps over the lazy dog.",
+            "Jinxed wizards pluck ivy from the big quilt.",
+            "All the things that are beautiful are beautiful without a price.",
+            "A creative man is motivated by the desire to achieve, not by the desire to beat others.",
+            "Life is like riding a bicycle. To keep your balance, you must keep moving.",
+            "It does not matter how slowly you go as long as you do not stop.",
+            "The mind is everything. What you think you become.",
+        ];
+
+        let currentText = "";
+        let currentCharIndex = 0;
+        let startTime = null;
+        let errors = 0;
+        let isRunning = false;
+        let typedCharacters = 0;
+
+        const textDisplay = document.getElementById('text-display');
+        const textInput = document.getElementById('text-input');
+        const restartButton = document.getElementById('restart-button');
+        const wpmDisplay = document.getElementById('wpm');
+        const accuracyDisplay = document.getElementById('accuracy');
+        const errorsDisplay = document.getElementById('errors');
+        const modal = document.getElementById('game-over-modal');
+        const closeModalButton = document.getElementById('close-modal-button');
+
+        // --- Core Functions ---
+
+        /**
+         * Selects a random text and initializes the display.
+         */
+        function loadText() {
+            // Select a random text
+            const randomIndex = Math.floor(Math.random() * testTexts.length);
+            currentText = testTexts[randomIndex];
+
+            // Render the text as individual spans for styling
+            textDisplay.innerHTML = '';
+            currentText.split('').forEach((char, index) => {
+                const charSpan = document.createElement('span');
+                
+                // FIX: Use &nbsp; for space characters to ensure they render visibly and take up space
+                if (char === ' ') {
+                    charSpan.innerHTML = '&nbsp;';
+                } else {
+                    charSpan.textContent = char;
+                }
+                
+                charSpan.classList.add('char');
+                if (index === 0) {
+                    charSpan.classList.add('current');
+                }
+                textDisplay.appendChild(charSpan);
+            });
+        }
+
+        /**
+         * Calculates and updates the WPM and Accuracy in real-time.
+         */
+        function updateStats() {
+            if (!startTime || !isRunning) return;
+
+            const currentTime = new Date();
+            const timeElapsed = (currentTime - startTime) / 60000; // Time in minutes
+
+            // WPM: (Typed Characters / 5) / Time in Minutes
+            const wpm = timeElapsed > 0 ? Math.round((typedCharacters / 5) / timeElapsed) : 0;
+            wpmDisplay.textContent = Math.max(0, wpm); // Ensure WPM is not negative
+
+            // Accuracy: ((Total Typed - Errors) / Total Typed) * 100
+            // Note: The totalTyped calculation was attempting complex backspace logic.
+            // A simpler, more standard approach is to use 'typedCharacters' for throughput 
+            // and keep 'errors' as the count of mistakes made.
+            const accuracy = typedCharacters > 0 ? Math.round(((typedCharacters - errors) / typedCharacters) * 100) : 100;
+            accuracyDisplay.textContent = `${Math.max(0, accuracy)}%`;
+            errorsDisplay.textContent = errors;
+        }
+
+        /**
+         * Handles user input key events.
+         */
+        function handleInput(event) {
+            const inputChar = event.target.value.slice(-1); // Get the last typed character
+
+            if (!isRunning && event.target.value.length > 0) {
+                // Start the game on the very first character typed
+                startGame();
+            }
+
+            if (!isRunning) return; // Prevent input after game ends
+
+            const expectedChar = currentText[currentCharIndex];
+            const charSpans = textDisplay.querySelectorAll('.char');
+
+            // --- Handle Backspace ---
+            if (event.inputType === 'deleteContentBackward') {
+                if (currentCharIndex > 0) {
+                    currentCharIndex--;
+                    const prevSpan = charSpans[currentCharIndex];
+                    // Clean up styling of the previous character
+                    prevSpan.classList.remove('correct', 'incorrect');
+
+                    // If the character being backspaced was marked incorrect, decrement errors
+                    if (prevSpan.dataset.isError === 'true') {
+                        errors = Math.max(0, errors - 1);
+                        prevSpan.dataset.isError = 'false';
+                    }
+
+                    // Move cursor back
+                    charSpans[currentCharIndex + 1].classList.remove('current');
+                    prevSpan.classList.add('current');
+
+                    // NOTE: We rely on the browser to manage the input value.
+                    // Instead of manually slicing the input value (which can conflict with 
+                    // how 'input' events fire), we let the browser handle it.
+                    
+                    // Decrement typedCharacters, as it reflects the total key presses used for WPM.
+                    // This count doesn't perfectly align with the text length when backspaces occur,
+                    // but it provides a good metric for calculating WPM throughput.
+                    typedCharacters = Math.max(0, typedCharacters - 1);
+
+                } else {
+                    // If at the beginning, reset input value to keep it clean
+                    event.target.value = '';
+                }
+                updateStats();
+                return;
+            }
+
+            // --- Handle Normal Character Input ---
+            // Input validation and error check is only done if we have more text to type
+            if (currentCharIndex < currentText.length) {
+                if (inputChar === expectedChar) {
+                    charSpans[currentCharIndex].classList.add('correct');
+                    charSpans[currentCharIndex].classList.remove('incorrect', 'current');
+                } else {
+                    charSpans[currentCharIndex].classList.add('incorrect');
+                    charSpans[currentCharIndex].classList.remove('correct', 'current');
+                    // Only count the first time a character is typed incorrectly
+                    if (!charSpans[currentCharIndex].dataset.isError) {
+                        errors++;
+                        charSpans[currentCharIndex].dataset.isError = 'true';
+                    }
+                }
+
+                typedCharacters++;
+                currentCharIndex++;
+
+                // Update cursor position and check for end of game
+                if (currentCharIndex < currentText.length) {
+                    // Move cursor forward
+                    charSpans[currentCharIndex].classList.add('current');
+                } else {
+                    gameEnd();
+                }
+            } else {
+                // Ignore input if the text is complete
+                event.target.value = event.target.value.slice(0, -1);
+            }
+
+            updateStats();
+        }
+
+        /**
+         * Starts the game timer and state.
+         */
+        function startGame() {
+            startTime = new Date();
+            isRunning = true;
+            textInput.disabled = false;
+            // Update stats every 1 second while typing
+            window.statInterval = setInterval(updateStats, 1000);
+        }
+
+        /**
+         * Ends the game and displays final results.
+         */
+        function gameEnd() {
+            isRunning = false;
+            clearInterval(window.statInterval);
+            textInput.disabled = true;
+
+            // Final calculation
+            const timeElapsed = (new Date() - startTime) / 60000; // Time in minutes
+            const finalWPM = timeElapsed > 0 ? Math.round((typedCharacters / 5) / timeElapsed) : 0;
+            const finalAccuracy = typedCharacters > 0 ? Math.round(((typedCharacters - errors) / typedCharacters) * 100) : 100;
+
+            // Update Modal Content
+            document.getElementById('final-wpm').textContent = Math.max(0, finalWPM);
+            document.getElementById('final-accuracy').textContent = `${Math.max(0, finalAccuracy)}%`;
+            document.getElementById('final-errors').textContent = errors;
+
+            // Show Modal
+            modal.classList.remove('hidden');
+        }
+
+        /**
+         * Resets all game state variables and UI.
+         */
+        function restartGame() {
+            // Reset state
+            currentCharIndex = 0;
+            startTime = null;
+            errors = 0;
+            isRunning = false;
+            typedCharacters = 0;
+            clearInterval(window.statInterval);
+
+            // Reset UI
+            textInput.value = '';
+            textInput.disabled = false;
+            wpmDisplay.textContent = '0';
+            accuracyDisplay.textContent = '100%';
+            errorsDisplay.textContent = '0';
+            modal.classList.add('hidden');
+
+            loadText();
+            textInput.focus();
+        }
+
+
+        // --- Event Listeners ---
+        textInput.addEventListener('input', handleInput);
+        restartButton.addEventListener('click', restartGame);
+        closeModalButton.addEventListener('click', restartGame);
+
+
+        // --- Initialization ---
+        window.onload = restartGame;
+    </script>
+
+</body>
+</html>
