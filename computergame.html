@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Computer Hardware Hunt!</title>
+    <!-- Load Tailwind CSS from CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom Styles -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+        .game-container {
+            min-height: 80vh;
+        }
+        .answer-button {
+            transition: all 0.15s ease-in-out;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .answer-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+        }
+        .correct-answer {
+            background-color: #34d399 !important; /* Tailwind green-400 */
+            color: white !important;
+            border-color: #10b981 !important;
+        }
+        .incorrect-answer {
+            background-color: #f87171 !important; /* Tailwind red-400 */
+            color: white !important;
+            border-color: #ef4444 !important;
+        }
+    </style>
+</head>
+<body class="p-4 flex justify-center items-center min-h-screen">
+
+    <div class="game-container w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-6 md:p-10 text-center">
+        
+        <h1 class="text-4xl font-black text-indigo-600 mb-2">Hardware Hunt! 🤖</h1>
+        <p id="question-counter" class="text-lg text-gray-500 mb-6 font-semibold">Question 1 of 6</p>
+
+        <!-- Score Display -->
+        <div class="mb-6">
+            <span class="text-xl font-bold text-gray-700">Score: </span>
+            <span id="score" class="text-3xl font-extrabold text-yellow-500">0</span>
+        </div>
+
+        <!-- Image Area -->
+        <div class="p-4 bg-gray-100 rounded-xl shadow-inner mb-8">
+            <img id="component-image" 
+                 src="" 
+                 alt="Computer Component Placeholder" 
+                 class="w-full h-auto max-h-80 object-contain rounded-lg border-4 border-gray-300 mx-auto"
+                 onerror="this.onerror=null; this.src='https://placehold.co/400x300/cccccc/000000?text=Image+Loading+Error';"
+                 >
+        </div>
+
+        <!-- Question and Options -->
+        <h2 id="question-text" class="text-2xl font-bold text-gray-800 mb-6">What is this component?</h2>
+
+        <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Answer buttons will be placed here -->
+        </div>
+
+        <!-- Feedback Area -->
+        <div id="feedback-message" class="mt-8 text-xl font-bold transition-opacity duration-300 opacity-0 min-h-[3rem] flex items-center justify-center"></div>
+
+        <!-- Next Button -->
+        <button id="next-button" 
+                class="mt-6 px-8 py-3 bg-indigo-500 text-white font-bold rounded-full text-lg shadow-lg hover:bg-indigo-600 transition duration-200 hidden" 
+                onclick="nextQuestion()">
+            Next Component &rarr;
+        </button>
+
+        <!-- Game Over Modal (Hidden by default) -->
+        <div id="game-over-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50">
+            <div class="bg-white p-8 rounded-xl shadow-2xl text-center max-w-sm w-full">
+                <h2 class="text-3xl font-black text-green-600 mb-4">You Finished! 🎉</h2>
+                <p class="text-xl text-gray-600 mb-6">Your Final Score:</p>
+                <p id="final-score" class="text-5xl font-extrabold text-yellow-500 mb-6">0 / 6</p>
+                
+                <p class="text-md text-gray-700 mb-6">You're a computer hardware pro!</p>
+
+                <button id="restart-button"
+                        class="w-full px-4 py-3 bg-indigo-500 text-white font-semibold rounded-full shadow-md hover:bg-indigo-600 transition duration-150"
+                        onclick="startGame()">
+                    Play Again
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Game Data ---
+        const questions = [
+            {
+                component: "Motherboard",
+                image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSwx3nvvU2n79m0Qp9AycTLm9hOkWCm-rBJ5Q&s",
+                options: ["Mouse Pad", "Motherboard", "Graphics Card", "Memory Stick"]
+            },
+            {
+                component: "RAM (Memory)",
+                image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRqRPpOKbqz4Qitu9geFNwk_4i27PSq5FOvBA&s",
+                options: ["Battery", "Processor", "RAM (Memory)", "Network Cable"]
+            },
+            {
+                component: "CPU (Processor)",
+                image_url: "https://images.unsplash.com/photo-1555617981-dac3880eac6e?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8Y3B1fGVufDB8fDB8fHww",
+                options: ["Fan", "Power Supply", "CPU (Processor)", "Keyboard Chip"]
+            },
+            {
+                component: "Graphics Card",
+                image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSe5gs-mnVVyosXzGvTqngZ5Yr21NLgnhm3ig&s",
+                options: ["Sound Card", "Graphics Card", "Modem", "Hard Drive"]
+            },
+            {
+                component: "Hard Drive",
+                image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTPwKKRIrwwaZyq7zERRA6lKvRGZwpk0kn5_Q&s",
+                options: ["Hard Drive", "CPU Cooler", "Webcam", "USB Flash Drive"]
+            },
+            {
+                component: "Power Supply",
+                image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR4fU8rnWuZcfPjfkVX8xvGI1kHcs6NA9MYiQ&s",
+                options: ["CD-ROM", "Speaker", "Power Supply", "Ethernet Port"]
+            },
+
+            {component: "Monitor", image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR79uiCu_r1N-8w4fqiTW-hPzxr9qQZ19T58w&s", options: ["Printer", "Monitor", "Router", "Scanner"] },
+            { component: "Keyboard", image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSerU8HBAl-Prx428xVPQ8mncFctOehnwCtcw&s", options: ["Joystick", "Keyboard", "Graphics Card", "CPU"] },
+            { component: "Mouse", image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT_BtLKlsdmjj_zXMUc0elSEBxbyRquvhY_tA&s", options: ["Mouse", "Printer", "Router", "Speaker"] },
+            { component: "Printer", image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRngAPPTgqPAgKOpeTESZMRgNwUAoTKr2YbeQ&s", options: ["Router", "Monitor", "Printer", "Scanner"] },
+            { component: "Router", image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS3ngBnCkgZvXGtAJnBW6ofR4ckb9De-ytOlA&s", options: ["Speaker", "Router", "Fan", "Projector"] },
+            { component: "Scanner", image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR3dpgaNlCJaINnHkJl9Okq4Qn2BAyoaXiNvA&s", options: ["Scanner", "Monitor", "Hard Drive", "Power Cable"] },
+            { component: "Webcam", image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTJYAPgjxZF_51FTrd7MXxm-Ewl6T8yq1S1jw&s", options: ["Webcam", "Microphone", "Modem", "Keyboard"] },
+            { component: "Speaker", image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT09-Ov1xpjXGs-lg7YykbWI97GyvlC1SrY1Q&s", options: ["Speaker", "Mouse", "CPU Fan", "Monitor"] },
+            { component: "USB Flash Drive", image_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRTmKZtqyUZ3fNyQ-D7FtZHY_jcqbsI91Wwbw&s", options: ["USB Flash Drive", "RAM", "Ethernet Cable", "Sound Card"] }
+          
+        ];
+
+        // --- Game State ---
+        let currentQuestions = [...questions]; // Array to hold shuffled questions
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let isAnswered = false; // Flag to prevent multiple clicks
+
+        // --- DOM Elements ---
+        const scoreDisplay = document.getElementById('score');
+        const questionCounter = document.getElementById('question-counter');
+        const componentImage = document.getElementById('component-image');
+        const optionsContainer = document.getElementById('options-container');
+        const feedbackMessage = document.getElementById('feedback-message');
+        const nextButton = document.getElementById('next-button');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const finalScoreDisplay = document.getElementById('final-score');
+
+        // --- Utility Functions ---
+
+        /**
+         * Shuffles an array in place (Fisher-Yates algorithm).
+         */
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        /**
+         * Cleans up UI and prepares for a new game.
+         */
+        function startGame() {
+            currentQuestionIndex = 0;
+            score = 0;
+            isAnswered = false;
+            gameOverModal.classList.add('hidden');
+            nextButton.classList.add('hidden');
+            scoreDisplay.textContent = score;
+            
+            // Shuffle questions for variety
+            currentQuestions = [...questions];
+            shuffleArray(currentQuestions);
+
+            loadQuestion();
+        }
+
+        /**
+         * Loads and displays the current question.
+         */
+        function loadQuestion() {
+            if (currentQuestionIndex >= currentQuestions.length) {
+                return endGame();
+            }
+
+            isAnswered = false;
+            nextButton.classList.add('hidden');
+            feedbackMessage.classList.remove('text-green-600', 'text-red-600');
+            feedbackMessage.classList.add('opacity-0');
+            
+            const q = currentQuestions[currentQuestionIndex];
+
+            // Update counter
+            questionCounter.textContent = `Question ${currentQuestionIndex + 1} of ${currentQuestions.length}`;
+
+            // Update image
+            componentImage.src = q.image_url;
+
+            // Update options
+            optionsContainer.innerHTML = '';
+            
+            // Shuffle options for the current question
+            let shuffledOptions = [...q.options];
+            shuffleArray(shuffledOptions);
+
+            shuffledOptions.forEach(option => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                button.classList.add(
+                    'answer-button', 'px-4', 'py-3', 'bg-white', 'text-gray-800', 
+                    'font-semibold', 'rounded-lg', 'border-2', 'border-indigo-400', 
+                    'hover:bg-indigo-50', 'text-xl', 'transition', 'duration-150'
+                );
+                button.setAttribute('data-answer', option);
+                button.onclick = () => checkAnswer(button, option, q.component);
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        /**
+         * Checks the user's selected answer.
+         * @param {HTMLElement} selectedButton - The button the user clicked.
+         * @param {string} selectedAnswer - The text of the selected button.
+         * @param {string} correctAnswer - The correct answer string.
+         */
+        function checkAnswer(selectedButton, selectedAnswer, correctAnswer) {
+            if (isAnswered) return;
+            isAnswered = true;
+
+            const allButtons = optionsContainer.querySelectorAll('button');
+            nextButton.classList.remove('hidden');
+            feedbackMessage.classList.remove('opacity-0');
+
+            if (selectedAnswer === correctAnswer) {
+                // Correct Answer
+                score++;
+                scoreDisplay.textContent = score;
+                selectedButton.classList.add('correct-answer');
+                feedbackMessage.textContent = "Awesome! That's correct!";
+                feedbackMessage.classList.add('text-green-600');
+            } else {
+                // Incorrect Answer
+                selectedButton.classList.add('incorrect-answer');
+                feedbackMessage.textContent = `Oops! The correct answer was the ${correctAnswer}.`;
+                feedbackMessage.classList.add('text-red-600');
+            }
+
+            // Highlight the correct answer if the user was wrong, and disable all buttons
+            allButtons.forEach(button => {
+                button.disabled = true;
+                if (button.getAttribute('data-answer') === correctAnswer && selectedAnswer !== correctAnswer) {
+                    button.classList.add('correct-answer');
+                }
+            });
+        }
+
+        /**
+         * Moves to the next question or ends the game.
+         */
+        function nextQuestion() {
+            currentQuestionIndex++;
+            loadQuestion();
+        }
+
+        /**
+         * Displays the game over screen.
+         */
+        function endGame() {
+            finalScoreDisplay.textContent = `${score} / ${currentQuestions.length}`;
+            gameOverModal.classList.remove('hidden');
+            nextButton.classList.add('hidden');
+        }
+
+        // --- Initialization ---
+        window.onload = startGame;
+    </script>
+
+</body>
+</html>
