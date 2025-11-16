@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Spelling Bee Game</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #fff7d1;
+        text-align: center;
+        margin: 0; padding: 20px;
+    }
+    h1 {
+        margin-top: 10px;
+        color: #d48b00;
+    }
+    #gameBox {
+        background: white;
+        padding: 20px;
+        max-width: 400px;
+        margin: auto;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    button {
+        font-size: 1rem;
+        padding: 10px 20px;
+        margin: 10px;
+        border: none;
+        border-radius: 8px;
+        background: #ffba08;
+        color: white;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    button:hover {
+        background: #e7a300;
+    }
+    input {
+        padding: 12px;
+        width: 85%;
+        border: 2px solid #ccc;
+        border-radius: 8px;
+        font-size: 1rem;
+        margin: 10px 0;
+    }
+    #message {
+        font-size: 1.1rem;
+        font-weight: bold;
+        margin: 12px 0;
+    }
+    .correct { color: green; }
+    .wrong { color: red; }
+</style>
+</head>
+<body>
+
+<h1>🐝 Spelling Bee Game</h1>
+
+<div id="gameBox">
+    <p>Click the button to hear the word.</p>
+
+    <button id="speakBtn">🔊 Play Word</button>
+
+    <br>
+
+    <input type="text" id="answer" placeholder="Type the spelling here">
+
+    <br>
+
+    <button id="checkBtn">Check</button>
+    <button id="nextBtn" style="display:none;">Next Word</button>
+
+    <p id="message"></p>
+    <p id="scoreBox">Score: 0</p>
+</div>
+
+<script>
+const words = [
+    "apple", "banana", "tiger", "school", "pencil",
+    "elephant", "music", "garden", "friend", "rocket",
+    "happy", "beautiful", "water", "animal", "teacher"
+];
+
+let currentWord = "";
+let score = 0;
+
+// Shuffle words
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+shuffle(words);
+
+// Speak function using browser TTS
+function speak(text) {
+    let utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 0.8; // slower for kids
+    speechSynthesis.speak(utter);
+}
+
+// Load a new word
+function newWord() {
+    if (words.length === 0) {
+        document.getElementById("gameBox").innerHTML =
+            `<h2>🎉 Finished!</h2>
+             <p>Your final score: <strong>${score}</strong></p>
+             <button onclick="location.reload()">Play Again</button>`;
+        return;
+    }
+
+    currentWord = words.pop();  
+    document.getElementById("message").textContent = "";
+    document.getElementById("answer").value = "";
+    document.getElementById("nextBtn").style.display = "none";
+}
+
+// Play the word aloud
+document.getElementById("speakBtn").onclick = () => {
+    speak(currentWord);
+};
+
+// Check answer
+document.getElementById("checkBtn").onclick = () => {
+    let userAnswer = document.getElementById("answer").value.trim().toLowerCase();
+    let message = document.getElementById("message");
+
+    if (userAnswer === "") return;
+
+    if (userAnswer === currentWord.toLowerCase()) {
+        message.textContent = "Correct! 🎉";
+        message.className = "correct";
+        score++;
+    } else {
+        message.textContent = `Wrong! The correct spelling is "${currentWord}".`;
+        message.className = "wrong";
+    }
+
+    document.getElementById("scoreBox").textContent = `Score: ${score}`;
+    document.getElementById("nextBtn").style.display = "inline-block";
+};
+
+// Next word
+document.getElementById("nextBtn").onclick = newWord;
+
+// Start game
+newWord();
+</script>
+
+</body>
+</html>
