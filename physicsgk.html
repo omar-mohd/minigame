@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physics Phacts Quiz</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" xintegrity="sha512-z1R/Jp7E0Vvj7fG2g7B5L7i2j2k8G3K8/vQx9z6Zz7o5F3/Q9n8+O5Kx7XF1Vf3B2Q0O9E9z3z7Q==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #e5e7eb; /* Gray 200 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .quiz-card {
+            max-width: 600px;
+            width: 95%;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+        .choice-button {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border: 2px solid #e0e7ff; /* Indigo 100 border */
+            text-align: left;
+            padding-left: 1.5rem;
+        }
+        .choice-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
+            background-color: #f3f4f6;
+        }
+        .choice-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.9;
+        }
+
+        /* Feedback Styles */
+        .correct {
+            background-color: #10b981 !important; /* Tailwind emerald-500 */
+            color: white !important;
+            border-color: #059669 !important; /* Tailwind emerald-600 */
+        }
+        .incorrect {
+            background-color: #ef4444 !important; /* Tailwind red-500 */
+            color: white !important;
+            border-color: #dc2626 !important; /* Tailwind red-600 */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="quiz-card bg-white rounded-2xl shadow-xl border-t-8 border-indigo-500">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-center text-indigo-700 mb-6 flex items-center justify-center">
+            <i class="fas fa-atom mr-3 text-indigo-500"></i> Physics Phacts
+        </h1>
+
+        <!-- Score and Progress -->
+        <div class="flex justify-between items-center mb-6 text-gray-600 font-semibold border-b pb-4">
+            <span id="score" class="text-lg">Score: 0</span>
+            <span id="question-counter" class="text-sm">Question 1/10</span>
+        </div>
+
+        <!-- Question Area -->
+        <div id="question-area" class="min-h-[100px] flex items-center justify-center mb-8">
+            <p id="question-text" class="text-xl md:text-2xl font-bold text-gray-800 text-center">Loading Question...</p>
+        </div>
+
+        <!-- Choices Area -->
+        <div id="choices-container" class="space-y-4">
+            <!-- Buttons injected here by JavaScript -->
+        </div>
+
+        <!-- Feedback and Control Area -->
+        <div class="mt-8">
+            <p id="feedback-message" class="text-center text-lg font-semibold min-h-[1.5rem] mb-4"></p>
+            <button id="next-button" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition duration-150 shadow-lg"
+                    onclick="nextQuestion()" disabled>
+                Next Question &raquo;
+            </button>
+        </div>
+
+
+        <!-- Game Over Modal (Hidden initially) -->
+        <div id="game-over-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center hidden z-50">
+            <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center transform scale-100 transition-transform duration-300">
+                <h2 class="text-4xl font-extrabold text-indigo-600 mb-4">Quiz Complete! 🚀</h2>
+                <p class="text-xl text-gray-700 mb-6">Your Final Score:</p>
+                <p class="text-6xl font-black text-emerald-600 mb-6"><span id="final-score">0</span> / 10</p>
+                <button class="w-full bg-indigo-500 text-white font-bold py-4 rounded-xl text-lg hover:bg-indigo-600 transition" onclick="startGame()">
+                    Play Again
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Game Data: Physics & General Science Questions ---
+        const QUIZ_DATA = [
+            {
+                question: "What is the SI unit of force?",
+                options: ["Joule", "Watt", "Newton", "Pascal"],
+                answer: "Newton"
+            },
+            {
+                question: "Which law states that for every action, there is an equal and opposite reaction?",
+                options: ["First Law of Thermodynamics", "Newton's First Law", "Newton's Second Law", "Newton's Third Law"],
+                answer: "Newton's Third Law"
+            },
+            {
+                question: "What fundamental particle is responsible for carrying the electromagnetic force?",
+                options: ["Neutrino", "Photon", "Electron", "Gluon"],
+                answer: "Photon"
+            },
+            {
+                question: "The process of a solid turning directly into a gas, bypassing the liquid phase, is called:",
+                options: ["Condensation", "Sublimation", "Evaporation", "Fusion"],
+                answer: "Sublimation"
+            },
+            {
+                question: "What is the speed of light in a vacuum, approximately?",
+                options: ["300,000 km/s", "30,000 km/s", "3,000 km/s", "3,000,000 km/s"],
+                answer: "300,000 km/s"
+            },
+            {
+                question: "Which term describes the amount of energy required to raise the temperature of a substance?",
+                options: ["Latent Heat", "Specific Heat Capacity", "Thermal Conductivity", "Kinetic Energy"],
+                answer: "Specific Heat Capacity"
+            },
+            {
+                question: "What is the core idea behind Einstein's famous equation $E=mc^2$?",
+                options: ["Gravity and velocity are relative", "Energy and mass are interchangeable", "Light always travels in straight lines", "Space-time is a fluid"],
+                answer: "Energy and mass are interchangeable"
+            },
+            {
+                question: "In orbital mechanics, what shape is the path of a planet orbiting the sun?",
+                options: ["Circle", "Parabola", "Hyperbola", "Ellipse"],
+                answer: "Ellipse"
+            },
+            {
+                question: "What phenomenon causes sound waves to change direction when passing from air into water?",
+                options: ["Reflection", "Refraction", "Diffraction", "Interference"],
+                answer: "Refraction"
+            },
+            {
+                question: "The half-life of a radioactive isotope is the time it takes for half of its atoms to:",
+                options: ["Combine with oxygen", "Become chemically inert", "Decay into a stable product", "Reach absolute zero"],
+                answer: "Decay into a stable product"
+            }
+        ];
+
+        // --- Game State Variables ---
+        const TOTAL_QUESTIONS = 10;
+        let gameQuestions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let currentCorrectAnswer = null;
+
+        // --- DOM Elements ---
+        const questionTextEl = document.getElementById('question-text');
+        const choicesContainer = document.getElementById('choices-container');
+        const scoreEl = document.getElementById('score');
+        const counterEl = document.getElementById('question-counter');
+        const feedbackEl = document.getElementById('feedback-message');
+        const nextButton = document.getElementById('next-button');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const finalScoreEl = document.getElementById('final-score');
+
+        // --- Helper Functions ---
+
+        /**
+         * Shuffles an array in place using the Fisher-Yates (Knuth) algorithm.
+         * @param {Array} array
+         */
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        /**
+         * Initializes the question list for the game.
+         */
+        function initializeGameQuestions() {
+            gameQuestions = [...QUIZ_DATA];
+            shuffleArray(gameQuestions);
+            // Limit to the first N questions if the total list is longer
+            gameQuestions = gameQuestions.slice(0, TOTAL_QUESTIONS);
+        }
+
+        /**
+         * Loads and displays the current question and choices.
+         */
+        function loadQuestion() {
+            if (currentQuestionIndex >= TOTAL_QUESTIONS) {
+                return endGame();
+            }
+
+            // Reset UI
+            feedbackEl.textContent = '';
+            nextButton.disabled = true;
+            choicesContainer.innerHTML = '';
+
+            const currentQ = gameQuestions[currentQuestionIndex];
+            currentCorrectAnswer = currentQ.answer;
+
+            // Update UI Counters
+            counterEl.textContent = `Question ${currentQuestionIndex + 1}/${TOTAL_QUESTIONS}`;
+            scoreEl.textContent = `Score: ${score}`;
+
+            // Set question text
+            questionTextEl.innerHTML = currentQ.question;
+
+            // Shuffle options for the current question
+            const options = [...currentQ.options];
+            shuffleArray(options);
+
+            // Generate choice buttons
+            options.forEach((choice, index) => {
+                const button = document.createElement('button');
+                button.textContent = `${String.fromCharCode(65 + index)}. ${choice}`; // A., B., C., D.
+                button.className = 'choice-button w-full bg-white text-gray-700 font-medium py-3 rounded-xl hover:bg-indigo-50 transition duration-150';
+                button.setAttribute('data-answer', choice);
+                button.onclick = () => checkAnswer(button, choice);
+                choicesContainer.appendChild(button);
+            });
+        }
+
+        /**
+         * Handles user choice and provides feedback.
+         * @param {HTMLButtonElement} selectedButton - The button clicked by the user.
+         * @param {string} selectedChoice - The choice text selected by the user.
+         */
+        function checkAnswer(selectedButton, selectedChoice) {
+            // Disable all buttons after selection
+            Array.from(choicesContainer.children).forEach(btn => btn.disabled = true);
+
+            if (selectedChoice === currentCorrectAnswer) {
+                selectedButton.classList.add('correct');
+                feedbackEl.innerHTML = '<span class="text-emerald-600"><i class="fas fa-check-circle mr-2"></i>Correct!</span>';
+                score++;
+            } else {
+                selectedButton.classList.add('incorrect');
+                feedbackEl.innerHTML = `<span class="text-red-600"><i class="fas fa-times-circle mr-2"></i>Incorrect.</span> The correct answer was: <b>${currentCorrectAnswer}</b>`;
+
+                // Highlight the correct button
+                const correctButton = Array.from(choicesContainer.children).find(btn => btn.getAttribute('data-answer') === currentCorrectAnswer);
+                if (correctButton) {
+                    // Use a slightly different green highlight for the correct answer
+                    correctButton.classList.add('bg-emerald-200', 'text-emerald-800', 'border-emerald-500');
+                }
+            }
+
+            // Update score immediately
+            scoreEl.textContent = `Score: ${score}`;
+            nextButton.disabled = false; // Enable next button
+        }
+
+        /**
+         * Proceeds to the next question or ends the game.
+         */
+        function nextQuestion() {
+            currentQuestionIndex++;
+            loadQuestion();
+        }
+
+        /**
+         * Starts a new game session.
+         */
+        function startGame() {
+            // Hide modal if visible
+            gameOverModal.classList.add('hidden');
+
+            // Reset game state
+            score = 0;
+            currentQuestionIndex = 0;
+            initializeGameQuestions();
+
+            // Start the first question
+            loadQuestion();
+        }
+
+        /**
+         * Displays the game over screen.
+         */
+        function endGame() {
+            finalScoreEl.textContent = score;
+            gameOverModal.classList.remove('hidden');
+        }
+
+        // --- Initial Load ---
+        window.onload = startGame;
+    </script>
+</body>
+</html>
