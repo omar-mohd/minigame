@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Scramble Blitz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7;
+        }
+        /* Custom styling for the game cards/tiles */
+        .letter-tile {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            font-weight: 900;
+            color: #1f2937; /* Dark Gray */
+            background-color: #fcd34d; /* Amber 300 */
+            border-radius: 8px;
+            box-shadow: 0 4px 0 0 #d97706; /* Darker Amber shadow */
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.1s;
+            user-select: none;
+        }
+        .letter-tile:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 0 #d97706;
+        }
+        .letter-tile:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 0 #d97706;
+        }
+
+        .input-tile {
+            min-height: 60px;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #10b981; /* Emerald 500 */
+            border-bottom: 3px solid #10b981;
+            letter-spacing: 5px;
+            padding: 5px 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .submit-btn {
+            background-color: #10b981; /* Emerald 500 */
+            transition: background-color 0.15s, transform 0.15s;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            background-color: #059669; /* Emerald 600 */
+            transform: translateY(-1px);
+        }
+
+        .submit-btn:active:not(:disabled) {
+            transform: translateY(1px);
+        }
+
+        .found-word {
+            display: inline-block;
+            background-color: #e5e7eb; /* Gray 200 */
+            padding: 4px 10px;
+            margin: 4px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #374151;
+        }
+
+        .timer-display {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #ef4444; /* Red 500 */
+            text-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
+        }
+
+        /* Modal specific styles */
+        .modal {
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 90%;
+            width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        
+    </style>
+</head>
+<body>
+
+    <!-- Main Game Container -->
+    <div class="max-w-xl mx-auto p-4 md:p-8">
+        <h1 class="text-4xl font-extrabold text-center text-gray-800 mb-6">Word Scramble Blitz</h1>
+        <div class="bg-white p-6 rounded-xl shadow-xl">
+
+            <!-- Score and Timer -->
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
+                <div class="text-center">
+                    <div class="text-gray-500 text-sm">Score</div>
+                    <div id="score" class="text-3xl font-bold text-blue-600">0</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-gray-500 text-sm">Time Left</div>
+                    <div id="timer" class="timer-display">60</div>
+                </div>
+            </div>
+
+            <!-- Current Word Input -->
+            <div id="current-word" class="input-tile mb-8 bg-gray-50 rounded-lg shadow-inner"></div>
+
+            <!-- Available Letters (Tiles) -->
+            <div id="letter-tiles" class="flex justify-center space-x-2 md:space-x-3 mb-8">
+                <!-- Tiles injected by JS -->
+            </div>
+
+            <!-- Actions and Message -->
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <button id="submit-word" class="submit-btn text-white font-bold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition">SUBMIT</button>
+                <button id="clear-word" class="bg-red-500 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:bg-red-600 transition">CLEAR</button>
+            </div>
+            
+            <div id="game-message" class="text-center text-red-600 font-semibold h-6 mb-4"></div>
+
+            <!-- Found Words Display -->
+            <div class="mt-6 pt-4 border-t">
+                <h2 class="text-xl font-bold text-gray-700 mb-3">Words Found (<span id="word-count">0</span>)</h2>
+                <div id="found-words-list" class="flex flex-wrap gap-2">
+                    <!-- Found words injected here -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="game-over-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-3xl font-extrabold text-gray-800 mb-4">Time's Up!</h2>
+            <p class="text-lg mb-6">You found **<span id="final-word-count" class="text-emerald-500 font-bold">0</span>** words for a total score of **<span id="final-score" class="text-blue-600 font-bold">0</span>** points!</p>
+            <button id="play-again-btn" class="submit-btn text-white font-bold py-3 px-6 rounded-lg shadow-md">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME DATA AND STATE ---
+
+        // A simple dictionary for validation (not exhaustive, but good for a kid's game)
+        // Using common nouns, verbs, and easy words.
+        const DICTIONARY = new Set([
+            "CAT", "DOG", "RUN", "JUMP", "SUN", "FUN", "CAR", "BOOK", "PEN", "TAPE",
+            "GAME", "WORD", "PLAY", "EAT", "SEE", "ZOO", "FOX", "BOX", "TIN", "CAN",
+            "MUG", "CUP", "BAG", "LOCK", "KEY", "BED", "SOFA", "CHAIR", "TABLE", "RACE",
+            "WALK", "TALK", "SING", "DANCE", "READ", "WRITE", "HIKE", "SWIM", "SNAIL",
+            "APPLE", "BALL", "TREE", "FLOWER", "HAPPY", "SAD", "BIG", "SMALL", "FAST", "SLOW",
+            "LAMP", "LIGHT", "DREAM", "SLEEP", "FROG", "BIRD", "FISH", "MILK", "CHEESE", "BREAD",
+            "RAIN", "WIND", "CLOUD", "STORM", "MUD", "LAKE", "RIVER", "BOAT", "SHIP", "ROAD",
+            "HOUSE", "HOME", "ROOM", "TOWN", "CITY", "PUPPY", "KITTEN", "DUCK", "GOOSE", "WOLF",
+            "BEAR", "COW", "PIG", "GOAT", "SHEEP", "FENCE", "GATE", "CLOCK", "TIME", "MONTH",
+            "YEAR", "TODAY", "YESTERDAY", "TOMORROW", "SCHOOL", "FRIEND", "HELLO", "GOODBYE",
+            "GREAT", "LOUD", "QUIET", "SOFT", "HARD", "SMART", "KIND", "NICE", "CLEVER", "BRAVE",
+            // Longer words (good for scoring)
+            "CREATE", "TENNIS", "ADVENTURE", "EXAMPLE", "PLANET", "FAMILY", "ORANGE", "PURPLE", "YELLOW",
+            "SECRET", "JOURNEY", "FATHER", "MOTHER", "SISTER", "BROTHER", "PENCIL", "ERASER", "NOTEBOOK"
+        ]);
+
+        const VOWELS = ['A', 'E', 'I', 'O', 'U'];
+        const CONSONANTS = ['B', 'C', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'X', 'Y', 'Z'];
+
+        let availableLetters = []; // The 7 letters for the round
+        let currentWord = '';
+        let foundWords = new Set();
+        let score = 0;
+        let timeLeft = 60;
+        let timerInterval;
+        let gameActive = false;
+
+        // --- DOM ELEMENTS ---
+        const letterTilesEl = document.getElementById('letter-tiles');
+        const currentWordEl = document.getElementById('current-word');
+        const submitBtn = document.getElementById('submit-word');
+        const clearBtn = document.getElementById('clear-word');
+        const scoreEl = document.getElementById('score');
+        const timerEl = document.getElementById('timer');
+        const messageEl = document.getElementById('game-message');
+        const foundWordsListEl = document.getElementById('found-words-list');
+        const wordCountEl = document.getElementById('word-count');
+        const modalEl = document.getElementById('game-over-modal');
+        const finalScoreEl = document.getElementById('final-score');
+        const finalWordCountEl = document.getElementById('final-word-count');
+        const playAgainBtn = document.getElementById('play-again-btn');
+
+        // --- GAME INITIALIZATION ---
+
+        function getRandomLetter(type) {
+            const list = type === 'vowel' ? VOWELS : CONSONANTS;
+            return list[Math.floor(Math.random() * list.length)];
+        }
+
+        function generateLetters() {
+            // Must have at least 2 vowels and 5 consonants for variety
+            let letters = [];
+            // Add 2 guaranteed vowels
+            letters.push(getRandomLetter('vowel'));
+            letters.push(getRandomLetter('vowel'));
+
+            // Add the remaining 5 letters (mix of consonants and vowels)
+            while (letters.length < 7) {
+                // Skew slightly towards consonants
+                const type = Math.random() < 0.7 ? 'consonant' : 'vowel';
+                letters.push(getRandomLetter(type));
+            }
+
+            // Shuffle the array and convert to an object array to track usage in the UI
+            letters = letters.sort(() => Math.random() - 0.5);
+
+            return letters.map(letter => ({ letter: letter, used: false }));
+        }
+
+        function startGame() {
+            // Reset game state
+            availableLetters = generateLetters();
+            currentWord = '';
+            foundWords.clear();
+            score = 0;
+            timeLeft = 60;
+            gameActive = true;
+            
+            // Clear UI
+            messageEl.textContent = '';
+            scoreEl.textContent = '0';
+            timerEl.textContent = timeLeft;
+            foundWordsListEl.innerHTML = '';
+            wordCountEl.textContent = '0';
+            currentWordEl.textContent = '';
+            modalEl.style.display = 'none';
+
+            // Draw letters and set up event listeners
+            renderLetterTiles();
+
+            // Start Timer
+            clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        // --- UI RENDERING ---
+
+        function renderLetterTiles() {
+            letterTilesEl.innerHTML = '';
+            availableLetters.forEach((data, index) => {
+                const tile = document.createElement('div');
+                tile.className = 'letter-tile';
+                tile.textContent = data.letter;
+                tile.dataset.index = index;
+                tile.dataset.used = data.used;
+
+                if (data.used) {
+                    // Visually dim the tile if it's used in the current word
+                    tile.classList.add('opacity-50', 'pointer-events-none');
+                    tile.classList.remove('cursor-pointer', 'hover:transform');
+                } else {
+                    tile.classList.remove('opacity-50', 'pointer-events-none');
+                    tile.classList.add('cursor-pointer');
+                    tile.onclick = () => handleTileClick(index);
+                }
+
+                letterTilesEl.appendChild(tile);
+            });
+        }
+
+        function updateScore(wordLength) {
+            let points = 0;
+            if (wordLength >= 3) {
+                // Simple scoring: 1 point for 3-letter, 2 for 4-letter, 3 for 5-letter, etc.
+                points = wordLength - 2; 
+                score += points;
+            }
+            scoreEl.textContent = score;
+            return points;
+        }
+
+        function renderFoundWord(word, points) {
+            const wordSpan = document.createElement('span');
+            wordSpan.className = 'found-word';
+            wordSpan.textContent = `${word} (+${points})`;
+            foundWordsListEl.prepend(wordSpan); // Add to the top
+            wordCountEl.textContent = foundWords.size;
+        }
+
+        // --- GAMEPLAY MECHANICS ---
+
+        function handleTileClick(index) {
+            if (!gameActive) return;
+
+            const tileData = availableLetters[index];
+            if (!tileData.used) {
+                currentWord += tileData.letter;
+                tileData.used = true;
+                currentWordEl.textContent = currentWord;
+                renderLetterTiles(); // Re-render to show tile dimming
+                messageEl.textContent = ''; // Clear previous messages
+            }
+        }
+
+        function clearWord() {
+            if (!gameActive) return;
+
+            currentWord = '';
+            currentWordEl.textContent = '';
+            
+            // Reset all letters to unused
+            availableLetters.forEach(data => data.used = false);
+            renderLetterTiles();
+            messageEl.textContent = '';
+        }
+
+        function submitWord() {
+            if (!gameActive) return;
+
+            const word = currentWord.toUpperCase();
+
+            // 1. Check length
+            if (word.length < 3) {
+                messageEl.textContent = 'Words must be 3 letters or longer!';
+                return;
+            }
+
+            // 2. Check if already found
+            if (foundWords.has(word)) {
+                messageEl.textContent = `You already found "${word.toLowerCase()}"!`;
+                clearWord();
+                return;
+            }
+
+            // 3. Check against dictionary
+            if (DICTIONARY.has(word)) {
+                // VALID WORD!
+                foundWords.add(word);
+                const points = updateScore(word.length);
+                renderFoundWord(word.toLowerCase(), points);
+                messageEl.textContent = `Great job! +${points} points!`;
+                clearWord(); // Clear for the next word
+            } else {
+                // INVALID WORD
+                messageEl.textContent = 'Not a recognized word. Try again!';
+                clearWord(); // Clear for the next word
+            }
+        }
+
+        // --- TIMER ---
+
+        function updateTimer() {
+            timeLeft--;
+            timerEl.textContent = timeLeft;
+
+            if (timeLeft <= 10) {
+                timerEl.classList.add('text-red-600', 'animate-pulse');
+            } else {
+                timerEl.classList.remove('text-red-600', 'animate-pulse');
+            }
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                endGame();
+            }
+        }
+
+        // --- GAME END ---
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(timerInterval);
+            
+            // Show Modal
+            finalScoreEl.textContent = score;
+            finalWordCountEl.textContent = foundWords.size;
+            modalEl.style.display = 'flex';
+        }
+
+        // --- EVENT BINDINGS ---
+
+        submitBtn.addEventListener('click', submitWord);
+        clearBtn.addEventListener('click', clearWord);
+        playAgainBtn.addEventListener('click', startGame);
+
+        // Allow keyboard input for submitting and clearing (Enter/Backspace)
+        document.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            
+            if (e.key === 'Enter') {
+                submitWord();
+            } else if (e.key === 'Backspace') {
+                clearWord();
+            }
+        });
+
+
+        // Start the game when the page loads
+        window.onload = startGame;
+
+    </script>
+</body>
+</html>
