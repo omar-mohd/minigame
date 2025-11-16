@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fruit & Veggie Sorting Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(to bottom, #87CEEB, #E0F7FA);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        
+        .game-container {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        h1 {
+            color: #FF5722;
+            text-align: center;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 0 #FFD54F;
+            font-size: 2.2rem;
+        }
+        
+        .score-container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            background-color: #4CAF50;
+            padding: 10px 20px;
+            border-radius: 15px;
+            color: white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .score-box {
+            text-align: center;
+        }
+        
+        .score-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        
+        .game-area {
+            display: flex;
+            width: 100%;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        
+        .conveyor-container {
+            width: 120px;
+            height: 400px;
+            background-color: #795548;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+        
+        .conveyor-belt {
+            width: 100%;
+            height: 200%;
+            background: repeating-linear-gradient(
+                0deg,
+                #8D6E63 0px,
+                #8D6E63 20px,
+                #6D4C41 20px,
+                #6D4C41 40px
+            );
+            position: absolute;
+            top: 0;
+            left: 0;
+            animation: moveBelt 10s linear infinite;
+        }
+        
+        @keyframes moveBelt {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-400px); }
+        }
+        
+        .item {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 40px;
+            left: 20px;
+            transition: transform 0.2s;
+            z-index: 2;
+        }
+        
+        .bins-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 120px;
+            height: 400px;
+        }
+        
+        .bin {
+            width: 100%;
+            height: 48%;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding-bottom: 10px;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .fruit-bin {
+            background: linear-gradient(to bottom, #FF9800, #F57C00);
+        }
+        
+        .veggie-bin {
+            background: linear-gradient(to bottom, #4CAF50, #2E7D32);
+        }
+        
+        .bin-label {
+            background-color: rgba(255, 255, 255, 0.3);
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            gap: 10px;
+        }
+        
+        .arrow-keys {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(2, 60px);
+            gap: 5px;
+        }
+        
+        .arrow-key {
+            background-color: #FFD54F;
+            border: none;
+            border-radius: 10px;
+            font-size: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 0 #FFB300;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        
+        .arrow-key:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+        
+        .arrow-up {
+            grid-column: 2;
+            grid-row: 1;
+        }
+        
+        .arrow-left {
+            grid-column: 1;
+            grid-row: 2;
+        }
+        
+        .arrow-right {
+            grid-column: 3;
+            grid-row: 2;
+        }
+        
+        .instructions {
+            background-color: white;
+            padding: 15px;
+            border-radius: 15px;
+            margin-top: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+        }
+        
+        .game-over {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            color: white;
+            display: none;
+        }
+        
+        .game-over-content {
+            background: linear-gradient(to bottom, #FF9800, #F57C00);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 80%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        
+        .restart-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            margin-top: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #2E7D32;
+            transition: all 0.2s;
+        }
+        
+        .restart-btn:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+        
+        .item.fruit {
+            background: linear-gradient(to bottom, #FFEB3B, #FFC107);
+            border: 3px solid #FF9800;
+        }
+        
+        .item.vegetable {
+            background: linear-gradient(to bottom, #8BC34A, #689F38);
+            border: 3px solid #4CAF50;
+        }
+        
+        .correct {
+            animation: correct 0.5s;
+        }
+        
+        .incorrect {
+            animation: incorrect 0.5s;
+        }
+        
+        @keyframes correct {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes incorrect {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            50% { transform: translateX(10px); }
+            75% { transform: translateX(-10px); }
+            100% { transform: translateX(0); }
+        }
+        
+        .item-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 3;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Fruit & Veggie Sorter</h1>
+        
+        <div class="score-container">
+            <div class="score-box">
+                <div>Score</div>
+                <div class="score-value" id="score">0</div>
+            </div>
+            <div class="score-box">
+                <div>Lives</div>
+                <div class="score-value" id="lives">3</div>
+            </div>
+            <div class="score-box">
+                <div>Time</div>
+                <div class="score-value" id="time">60</div>
+            </div>
+        </div>
+        
+        <div class="game-area">
+            <div class="conveyor-container">
+                <div class="conveyor-belt"></div>
+                <div class="item-container" id="item-container">
+                    <!-- Items will be dynamically added here -->
+                </div>
+            </div>
+            
+           <div class="bins-container">
+    <!-- FRUIT BIN first → appears LEFT -->
+    <div class="bin fruit-bin" id="fruit-bin">
+        <div class="bin-label">Fruits  use the left arrow  &#8678; </div>
+    </div>
+
+    <!-- VEGETABLE BIN second → appears RIGHT -->
+    <div class="bin veggie-bin" id="veggie-bin">
+        <div class="bin-label">Vegetables use the right arrow &#8680; </div>
+    </div>
+</div>
+
+            
+        </div>
+        
+        <div class="controls">
+            <div class="arrow-keys">
+                <button class="arrow-key arrow-up" id="up-btn">↑</button>
+                <button class="arrow-key arrow-left" id="left-btn">←</button>
+                <button class="arrow-key arrow-right" id="right-btn">→</button>
+            </div>
+            <p>Use arrow keys to sort items!</p>
+        </div>
+        
+        <div class="instructions">
+            <h3>How to Play:</h3>
+            <p>Sort the fruits and vegetables into the correct bins!</p>
+            <p>Use ← for Fruits and → for Vegetables</p>
+            <p>You have 60 seconds to get as many points as you can!</p>
+        </div>
+    </div>
+    
+    <div class="game-over" id="game-over">
+        <div class="game-over-content">
+            <h2>Game Over!</h2>
+            <p>Your final score: <span id="final-score">0</span></p>
+            <button class="restart-btn" id="restart-btn">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Game elements
+        const scoreElement = document.getElementById('score');
+        const livesElement = document.getElementById('lives');
+        const timeElement = document.getElementById('time');
+        const itemContainer = document.getElementById('item-container');
+        const gameOverElement = document.getElementById('game-over');
+        const finalScoreElement = document.getElementById('final-score');
+        const restartButton = document.getElementById('restart-btn');
+        const leftButton = document.getElementById('left-btn');
+        const rightButton = document.getElementById('right-btn');
+        const fruitBin = document.getElementById('fruit-bin');
+        const veggieBin = document.getElementById('veggie-bin');
+        
+        // Game state
+        let score = 0;
+        let lives = 3;
+        let timeLeft = 60;
+        let gameActive = true;
+        let timer;
+        let itemInterval;
+        let items = [];
+        let itemIdCounter = 0;
+        
+        // Fruits and vegetables with emojis
+        const fruits = [
+            { emoji: '🍎', name: 'Apple' },
+            { emoji: '🍌', name: 'Banana' },
+            { emoji: '🍇', name: 'Grapes' },
+            { emoji: '🍓', name: 'Strawberry' },
+            { emoji: '🍊', name: 'Orange' },
+            { emoji: '🍑', name: 'Peach' },
+            { emoji: '🍍', name: 'Pineapple' },
+            { emoji: '🥭', name: 'Mango' }
+        ];
+        
+        const vegetables = [
+            { emoji: '🥕', name: 'Carrot' },
+            { emoji: '🥦', name: 'Broccoli' },
+            { emoji: '🍅', name: 'Tomato' },
+            { emoji: '🥒', name: 'Cucumber' },
+            { emoji: '🌽', name: 'Corn' },
+            { emoji: '🍆', name: 'Eggplant' },
+            { emoji: '🥬', name: 'Lettuce' },
+            { emoji: '🫑', name: 'Pepper' }
+        ];
+        
+        // Initialize game
+        function initGame() {
+            score = 0;
+            lives = 3;
+            timeLeft = 60;
+            gameActive = true;
+            items = [];
+            itemIdCounter = 0;
+            
+            scoreElement.textContent = score;
+            livesElement.textContent = lives;
+            timeElement.textContent = timeLeft;
+            
+            // Clear items
+            itemContainer.innerHTML = '';
+            
+            gameOverElement.style.display = 'none';
+            
+            // Start timer
+            clearInterval(timer);
+            timer = setInterval(updateTimer, 1000);
+            
+            // Start generating items
+            clearInterval(itemInterval);
+            itemInterval = setInterval(generateNewItem, 1500);
+            
+            // Generate first item
+            generateNewItem();
+        }
+        
+        // Generate a new random item
+        function generateNewItem() {
+            if (!gameActive) return;
+            
+            // Randomly decide if it's a fruit or vegetable
+            const isFruit = Math.random() > 0.5;
+            const itemPool = isFruit ? fruits : vegetables;
+            const randomItem = itemPool[Math.floor(Math.random() * itemPool.length)];
+            
+            // Create item element
+            const item = document.createElement('div');
+            item.className = `item ${isFruit ? 'fruit' : 'vegetable'}`;
+            item.textContent = randomItem.emoji;
+            item.id = `item-${itemIdCounter}`;
+            
+            // Set initial position at top
+            item.style.top = '-80px';
+            
+            // Add to container
+            itemContainer.appendChild(item);
+            
+            // Store item data
+            items.push({
+                id: itemIdCounter,
+                element: item,
+                isFruit: isFruit,
+                position: -80,
+                speed: 1 + Math.random() * 0.5
+            });
+            
+            itemIdCounter++;
+        }
+        
+        // Update items position
+        function updateItems() {
+            if (!gameActive) return;
+            
+            for (let i = items.length - 1; i >= 0; i--) {
+                const item = items[i];
+                item.position += item.speed;
+                item.element.style.top = `${item.position}px`;
+                
+                // Check if item reached the bottom
+                if (item.position > 400) {
+                    // Remove item
+                    item.element.remove();
+                    items.splice(i, 1);
+                    
+                    // Lose a life for missed item
+                    lives--;
+                    livesElement.textContent = lives;
+                    
+                    if (lives <= 0) {
+                        endGame();
+                    }
+                }
+            }
+            
+            // Continue animation
+            requestAnimationFrame(updateItems);
+        }
+        
+        // Sort item
+        function sortItem(isFruitChoice) {
+            if (!gameActive || items.length === 0) return;
+            
+            // Get the bottom-most item
+            const bottomItemIndex = findBottomItemIndex();
+            if (bottomItemIndex === -1) return;
+            
+            const item = items[bottomItemIndex];
+            
+            if (isFruitChoice === item.isFruit) {
+                // Correct sorting
+                score += 10;
+                scoreElement.textContent = score;
+                item.element.classList.add('correct');
+                
+                // Animate to correct bin
+                const targetBin = isFruitChoice ? fruitBin : veggieBin;
+                const binRect = targetBin.getBoundingClientRect();
+                const itemRect = item.element.getBoundingClientRect();
+                
+                // Calculate movement
+                const deltaX = binRect.left - itemRect.left + (binRect.width - itemRect.width) / 2;
+                const deltaY = binRect.top - itemRect.top + (binRect.height - itemRect.height) / 2;
+                
+                // Apply animation
+                item.element.style.transition = 'all 0.5s ease-in';
+                item.element.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(0.5)`;
+                item.element.style.opacity = '0';
+                
+                // Remove after animation
+                setTimeout(() => {
+                    item.element.remove();
+                    items.splice(bottomItemIndex, 1);
+                }, 500);
+            } else {
+                // Incorrect sorting
+                lives--;
+                livesElement.textContent = lives;
+                item.element.classList.add('incorrect');
+                
+                setTimeout(() => {
+                    item.element.classList.remove('incorrect');
+                    
+                    if (lives <= 0) {
+                        endGame();
+                    }
+                }, 500);
+            }
+        }
+        
+        // Find the bottom-most item
+        function findBottomItemIndex() {
+            if (items.length === 0) return -1;
+            
+            let maxPosition = -Infinity;
+            let maxIndex = -1;
+            
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].position > maxPosition) {
+                    maxPosition = items[i].position;
+                    maxIndex = i;
+                }
+            }
+            
+            return maxIndex;
+        }
+        
+        // Update timer
+        function updateTimer() {
+            if (!gameActive) return;
+            
+            timeLeft--;
+            timeElement.textContent = timeLeft;
+            
+            if (timeLeft <= 0) {
+                endGame();
+            }
+        }
+        
+        // End game
+        function endGame() {
+            gameActive = false;
+            clearInterval(timer);
+            clearInterval(itemInterval);
+            finalScoreElement.textContent = score;
+            gameOverElement.style.display = 'flex';
+        }
+        
+        // Event listeners for buttons
+        leftButton.addEventListener('click', () => sortItem(true));
+        rightButton.addEventListener('click', () => sortItem(false));
+        restartButton.addEventListener('click', initGame);
+        
+        // Keyboard controls
+        document.addEventListener('keydown', (event) => {
+            if (!gameActive) return;
+            
+            switch(event.key) {
+                case 'ArrowLeft':
+                    sortItem(true);
+                    break;
+                case 'ArrowRight':
+                    sortItem(false);
+                    break;
+            }
+        });
+        
+        // Start the game and animation
+        initGame();
+        updateItems();
+    </script>
+</body>
+</html>
