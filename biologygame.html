@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Biology Drag & Drop — Match the Part to the Organ</title>
+<style>
+  :root{
+    --bg:#f3fbff; --card:#ffffff; --accent:#2b8cff; --good:#22c55e; --bad:#ff6b6b;
+    --muted:#6b7280;
+  }
+  *{box-sizing:border-box}
+  body{
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background: linear-gradient(180deg, #e9f5ff 0%, var(--bg) 40%);
+    margin:0;
+    padding:20px;
+    color:#0f172a;
+  }
+
+  header{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:18px;
+  }
+  h1{font-size:1.25rem; margin:0}
+  .controls{display:flex; gap:10px; align-items:center}
+  button{
+    background:var(--accent);
+    color:white;
+    border:none;
+    padding:8px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:600;
+  }
+  button.secondary{background:transparent; color:var(--accent); border:2px solid var(--accent)}
+  button.ghost{background:transparent; border:1px dashed #cbd5e1; color:var(--muted); font-weight:600}
+  .meta{font-size:0.9rem; color:var(--muted); display:flex; gap:12px; align-items:center}
+
+  .game{
+    display:grid;
+    grid-template-columns: 1fr 320px;
+    gap:18px;
+    align-items:start;
+  }
+  .left{
+    background:linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.95));
+    border-radius:12px;
+    padding:16px;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+  }
+  .right{
+    padding:16px;
+  }
+
+  .tray{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:8px;
+  }
+  .draggable{
+    user-select:none;
+    width:150px;
+    min-height:48px;
+    background:var(--card);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:8px 10px;
+    border-radius:10px;
+    border:1px solid rgba(15,23,42,0.06);
+    box-shadow: 0 6px 12px rgba(15,23,42,0.03);
+    cursor:grab;
+    font-weight:600;
+  }
+  .draggable:active{cursor:grabbing}
+  .draggable.dragging{opacity:0.6; transform:scale(0.98)}
+
+  .label-emoji{font-size:1.5rem; width:34px; text-align:center}
+  .label-text{flex:1; font-size:0.97rem}
+
+  .targets{
+    display:grid;
+    gap:10px;
+  }
+  .target{
+    background:linear-gradient(180deg,#fff,#fbfdff);
+    border-radius:12px;
+    padding:12px;
+    min-height:64px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    border:2px dashed rgba(15,23,42,0.06);
+    transition:all .18s ease;
+  }
+  .target.over{border-color:var(--accent); transform:translateY(-4px); box-shadow:0 10px 30px rgba(43,140,255,0.06)}
+  .target.correct{border-color:var(--good); background:linear-gradient(180deg,#f0fff4,#ffffff)}
+  .target.incorrect{border-color:var(--bad); background:linear-gradient(180deg,#fff6f6,#ffffff)}
+
+  .target .org-emoji{font-size:1.6rem; width:42px; text-align:center}
+  .target .org-name{font-weight:700}
+  .placed{
+    margin-left:auto;
+    font-size:0.95rem;
+    color:var(--muted);
+  }
+
+  .footer{
+    margin-top:12px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+  }
+
+  .hint{
+    margin-top:10px;
+    font-size:0.95rem;
+    color:var(--muted);
+  }
+
+  /* responsive */
+  @media (max-width:900px){
+    .game{grid-template-columns: 1fr; }
+    .right{order:2}
+  }
+
+  /* celebration */
+  .celebrate{
+    margin-top:12px;
+    padding:10px;
+    border-radius:10px;
+    background:linear-gradient(90deg,#fef3c7,#dcfce7);
+    color:#92400e;
+    font-weight:700;
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Biology Match — Drag the structure to the correct organ</h1>
+    <div class="meta">Drag the part (left) onto the organ (right). Try to match all correctly!</div>
+  </div>
+
+  <div class="controls">
+    <button id="shuffleBtn" title="Shuffle items">Shuffle</button>
+    <button id="resetBtn" class="ghost" title="Reset game">Reset</button>
+  </div>
+</header>
+
+<main class="game" role="application" aria-label="Biology matching game">
+  <section class="left" aria-labelledby="partsTitle">
+    <h2 id="partsTitle">Parts to drag</h2>
+    <div class="tray" id="tray" aria-live="polite"></div>
+
+    <div class="footer">
+      <div>
+        <span class="meta">Score: <strong id="score">0</strong> / <span id="total">8</span></span>
+        <div class="hint" id="hint">Need help? Click a part to get a small hint.</div>
+      </div>
+      <div>
+        <span class="meta">Attempts: <strong id="attempts">0</strong></span>
+      </div>
+    </div>
+
+    <div id="celebrate" style="display:none" class="celebrate">🎉 All matched — great job! Learn more by clicking "Reset".</div>
+  </section>
+
+  <aside class="right" aria-labelledby="targetsTitle">
+    <h2 id="targetsTitle">Organs (drop here)</h2>
+    <div class="targets" id="targets"></div>
+
+    <div style="margin-top:12px; display:flex; gap:10px;">
+      <button id="revealBtn" class="secondary">Reveal answers</button>
+      <button id="autoSolveBtn" class="secondary">Auto-solve</button>
+    </div>
+  </aside>
+</main>
+
+<script>
+/*
+ Biology Drag & Drop matching game
+ Single-file. No external assets.
+*/
+
+const pairs = [
+  // id, organName, organEmoji, correctPart (draggable label), partHint
+  {id:'eye', organ:'Eye', emoji:'👁️', part:'Retina', hint:'Light-sensitive layer at the back of the eye'},
+  {id:'ear', organ:'Ear', emoji:'👂', part:'Cochlea', hint:'Spiral structure for hearing'},
+  {id:'heart', organ:'Heart', emoji:'❤️', part:'Left Ventricle', hint:'A chamber that pumps blood to the body'},
+  {id:'lung', organ:'Lungs', emoji:'🫁', part:'Alveoli', hint:'Tiny air sacs where gas exchange happens'},
+  {id:'brain', organ:'Brain', emoji:'🧠', part:'Cerebrum', hint:'Largest part responsible for thinking'},
+  {id:'kidney', organ:'Kidney', emoji:'🟤', part:'Nephron', hint:'Functional filtering unit of kidney'},
+  {id:'stomach', organ:'Stomach', emoji:'🫙', part:'Gastric Glands', hint:'Secrete acid and enzymes to digest food'},
+  {id:'skin', organ:'Skin', emoji:'🟨', part:'Epidermis', hint:'Outermost layer of the skin'}
+];
+
+const trayEl = document.getElementById('tray');
+const targetsEl = document.getElementById('targets');
+const scoreEl = document.getElementById('score');
+const totalEl = document.getElementById('total');
+const attemptsEl = document.getElementById('attempts');
+const celebrateEl = document.getElementById('celebrate');
+const hintEl = document.getElementById('hint');
+
+let score = 0;
+let attempts = 0;
+let completed = {}; // id -> true
+
+totalEl.textContent = pairs.length;
+
+function shuffleArray(a) {
+  for (let i = a.length -1; i>0; i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i], a[j]]=[a[j],a[i]];
+  }
+}
+
+// create DOM
+function buildGame(shuffle=true){
+  score = 0; attempts = 0; completed = {};
+  scoreEl.textContent = score;
+  attemptsEl.textContent = attempts;
+  celebrateEl.style.display = 'none';
+  trayEl.innerHTML = '';
+  targetsEl.innerHTML = '';
+  hintEl.textContent = 'Need help? Click a part to get a small hint.';
+
+  const order = pairs.map(p => ({...p}));
+  if (shuffle) shuffleArray(order);
+  // create draggable parts (use part text + small emoji for fun)
+  order.forEach(item=>{
+    const d = document.createElement('div');
+    d.className = 'draggable';
+    d.setAttribute('draggable','true');
+    d.setAttribute('role','button');
+    d.dataset.for = item.id;
+    d.id = 'drag-'+item.id;
+
+    d.innerHTML = `
+      <div class="label-emoji">🔬</div>
+      <div class="label-text">${item.part}</div>
+      <div style="opacity:.6; font-size:.85rem; margin-left:auto;">(${item.part.length}ch)</div>
+    `;
+    // click to show hint
+    d.addEventListener('click',()=> {
+      showHint(item);
+      // small pulse effect
+      d.animate([{transform:'scale(1)'},{transform:'scale(1.03)'},{transform:'scale(1)'}], {duration:250});
+    });
+
+    // drag events
+    d.addEventListener('dragstart', dragStart);
+    d.addEventListener('dragend', dragEnd);
+    trayEl.appendChild(d);
+  });
+
+  // build targets (organs)
+  const targetsOrder = pairs.map(p => ({...p}));
+  if (shuffle) shuffleArray(targetsOrder);
+  targetsOrder.forEach(t=>{
+    const div = document.createElement('div');
+    div.className = 'target';
+    div.id = 'target-'+t.id;
+    div.dataset.id = t.id;
+    div.dataset.expected = t.part;
+    div.innerHTML = `
+      <div class="org-emoji">${t.emoji}</div>
+      <div>
+        <div class="org-name">${t.organ}</div>
+        <div style="font-size:.9rem; color:var(--muted)">Drop the matching structure</div>
+      </div>
+      <div class="placed" aria-live="polite"></div>
+    `;
+    // drag-over / drop
+    div.addEventListener('dragover', allowDrop);
+    div.addEventListener('dragenter', onEnter);
+    div.addEventListener('dragleave', onLeave);
+    div.addEventListener('drop', onDrop);
+    targetsEl.appendChild(div);
+  });
+}
+
+function showHint(item){
+  hintEl.textContent = `${item.part} — Hint: ${item.hint}.`;
+}
+
+// drag handlers
+function dragStart(e){
+  this.classList.add('dragging');
+  e.dataTransfer.setData('text/plain', this.dataset.for);
+  // make drag image (clone) for better UX
+  const crt = this.cloneNode(true);
+  crt.style.position='absolute';
+  crt.style.top='-1000px';
+  crt.style.left='-1000px';
+  crt.style.boxShadow='0 10px 30px rgba(15,23,42,0.2)';
+  document.body.appendChild(crt);
+  e.dataTransfer.setDragImage(crt, 30, 20);
+  setTimeout(()=> document.body.removeChild(crt), 0);
+}
+
+function dragEnd(e){
+  this.classList.remove('dragging');
+}
+
+function allowDrop(e){
+  e.preventDefault();
+}
+
+function onEnter(e){
+  e.preventDefault();
+  this.classList.add('over');
+}
+
+function onLeave(e){
+  this.classList.remove('over');
+}
+
+function onDrop(e){
+  e.preventDefault();
+  this.classList.remove('over');
+  const forId = e.dataTransfer.getData('text/plain');
+  if(!forId) return;
+  attempts++;
+  attemptsEl.textContent = attempts;
+
+  const draggedEl = document.getElementById('drag-'+forId);
+  if(!draggedEl) return; // already placed?
+
+  const targetId = this.dataset.id;
+  // find the pair objects
+  const pair = pairs.find(p => p.id === targetId);
+  const draggedPair = pairs.find(p => p.id === forId);
+
+  // check match
+  if (pair && draggedPair && pair.id === draggedPair.id){
+    // correct
+    this.classList.remove('incorrect');
+    this.classList.add('correct');
+    const placed = this.querySelector('.placed');
+    placed.textContent = draggedPair.part;
+    // remove draggable from tray
+    draggedEl.parentElement.removeChild(draggedEl);
+    score++;
+    scoreEl.textContent = score;
+    completed[targetId] = true;
+
+    // small success animation
+    this.animate([{transform:'scale(1)'},{transform:'scale(1.02)'},{transform:'scale(1)'}],{duration:180});
+    // if all done -> celebrate
+    if (score === pairs.length){
+      celebrate();
+    }
+  } else {
+    // incorrect
+    this.classList.add('incorrect');
+    // quick shake
+    this.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:300});
+    // mark incorrect briefly then remove
+    setTimeout(()=> this.classList.remove('incorrect'),800);
+    // give small hint: show which part belongs here
+    hintEl.textContent = `Not that one — the correct structure for ${pair.organ} is ${pair.part}. Try again!`;
+  }
+}
+
+function celebrate(){
+  celebrateEl.style.display = 'flex';
+  // confetti-like effect: create small colored dots
+  for (let i=0;i<18;i++){
+    const dot = document.createElement('div');
+    dot.textContent = '✨';
+    dot.style.position='fixed';
+    dot.style.left = (30 + Math.random()*80)+'%';
+    dot.style.top = (20 + Math.random()*60)+'%';
+    dot.style.fontSize = (10 + Math.random()*24)+'px';
+    dot.style.pointerEvents='none';
+    dot.style.opacity='0.95';
+    document.body.appendChild(dot);
+    dot.animate([{transform:'translateY(-10px)', opacity:1},{transform:'translateY(80px)', opacity:0}],{duration:1500+Math.random()*800, easing:'cubic-bezier(.19,1,.22,1)'});
+    setTimeout(()=> dot.remove(), 2200);
+  }
+}
+
+// control buttons
+document.getElementById('shuffleBtn').addEventListener('click', ()=> buildGame(true));
+document.getElementById('resetBtn').addEventListener('click', ()=> buildGame(false));
+
+document.getElementById('revealBtn').addEventListener('click', revealAnswers);
+document.getElementById('autoSolveBtn').addEventListener('click', autoSolve);
+
+function revealAnswers(){
+  // reveal correct label for every target without removing draggables
+  targetsEl.querySelectorAll('.target').forEach(t => {
+    const id = t.dataset.id;
+    const pair = pairs.find(p => p.id === id);
+    if (pair){
+      t.classList.add('correct');
+      t.querySelector('.placed').textContent = pair.part;
+      completed[id] = true;
+    }
+  });
+  // clear tray
+  trayEl.innerHTML = '';
+  score = pairs.length;
+  scoreEl.textContent = score;
+  celebrate();
+}
+
+function autoSolve(){
+  // automatically place the correct item into each target
+  targetsEl.querySelectorAll('.target').forEach(t=>{
+    const id = t.dataset.id;
+    const pair = pairs.find(p => p.id === id);
+    if (pair){
+      t.classList.add('correct');
+      t.querySelector('.placed').textContent = pair.part;
+      completed[id] = true;
+      // remove draggable from tray if exists
+      const d = document.getElementById('drag-'+id);
+      if (d && d.parentElement) d.parentElement.removeChild(d);
+    }
+  });
+  score = pairs.length;
+  scoreEl.textContent = score;
+  attempts += pairs.length;
+  attemptsEl.textContent = attempts;
+  celebrate();
+}
+
+// accessibility: keyboard support - let user focus a draggable and press Enter then focus a target and press Enter to drop
+let keyboardPicked = null;
+document.addEventListener('keydown', (e)=>{
+  if (e.key === 'Enter' && document.activeElement){
+    const el = document.activeElement;
+    if (el.classList.contains('draggable')){
+      // pick up
+      keyboardPicked = el.dataset.for;
+      el.style.outline = '3px dashed rgba(43,140,255,0.35)';
+      hintEl.textContent = `Picked up ${el.querySelector('.label-text').textContent}. Now focus an organ and press Enter to drop.`;
+    } else if (el.classList.contains('target') && keyboardPicked){
+      // drop
+      const fakeEvent = {dataTransfer:{getData:()=>keyboardPicked}};
+      onDrop.call(el, fakeEvent);
+      // cleanup
+      const pickedEl = document.getElementById('drag-'+keyboardPicked);
+      if (pickedEl) pickedEl.style.outline = '';
+      keyboardPicked = null;
+    }
+  }
+});
+
+// initial build
+buildGame(true);
+</script>
+
+</body>
+</html>
